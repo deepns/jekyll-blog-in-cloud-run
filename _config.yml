@@ -18,7 +18,7 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Jekyll blog on Cloud Run
+title: A Jekyll blog on Cloud Run
 email: hi.deepan@outlook.com
 description: >- # this means to ignore newlines until "baseurl:"
   Hosting a jekyll based static site in GCP Cloud Run.
