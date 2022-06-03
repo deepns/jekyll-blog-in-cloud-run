@@ -90,3 +90,42 @@ e46b48b303a9   cloudrunblog:v1   "/docker-entrypoint.…"   46 seconds ago   Up 
 
 [config guide](http://nginx.org/en/docs/beginners_guide.html)
 [config file structure](http://nginx.org/en/docs/beginners_guide.html#conf_structure)
+
+## Step 3
+
+Building the site and container image together
+
+While this works good for the most part, it still requires bit of manual steps to build the image.
+
+The steps to build the site with Jekyll build and packaging the site contents into an nginx image can be done together during image building process.
+
+Updated the Dockerfile to build the site with jekyll before packing into nginx
+
+```Dockerfile
+# naming this stage as build
+FROM ruby as jekyll-build
+
+# Install bundler gem
+RUN gem install bundler
+
+WORKDIR /work
+
+# Copy Gemfile into /work and run bundle install
+# to install the required dependencies
+COPY Gemfile* /work/
+RUN bundle install
+
+# Copy the root contents into /work
+COPY . .
+
+# Set necessary environment variables for the build
+# and fire off the build
+ENV JEKYLL_ENV=production
+RUN bundle exec jekyll build
+
+# Now that _site is built in /work directory, lets take
+# that into the nginx image.
+FROM nginx
+COPY --from=jekyll-build  /work/_site /usr/share/nginx/html
+COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
+```
