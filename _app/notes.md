@@ -129,3 +129,19 @@ FROM nginx
 COPY --from=jekyll-build  /work/_site /usr/share/nginx/html
 COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
 ```
+
+## Step 4
+
+- Setting up Google Cloud. Components
+    - Cloud Run
+    - Container Registry or Artifact Registry
+- Update the nginx listening port
+- Build the image 
+- Push the image to GCP artifact registry
+- Deploy a cloud run service
+- Make edits
+- Build. Push. Deploy
+
+## Step 5
+
+- Configure CI/CD in Cloud Run.
