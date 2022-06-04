@@ -145,3 +145,21 @@ COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
 ## Step 5
 
 - Configure CI/CD in Cloud Run.
+- Followed the steps from [here](https://cloud.google.com/run/docs/continuous-deployment-with-cloud-build#existing-service)
+    - Goto cloud run page
+    - Set up continuous deployment
+    - Authenticate with Github
+    - Add connected repositories
+    - Specify build configuration (branch and Dockerfile)
+- This creates a Cloud Build trigger to do the following steps when a new commit is pushed to the specified branch (pretty much the same steps as what described in [manual steps](https://cloud.google.com/build/docs/deploying-builds/deploy-cloud-run))
+    - Build the image
+    - Push the image to container registry
+    - Deploy the image to the service
+- UI makes the job little easier here. 
+- Steps to capture
+    - Set up continuous deployment
+    - Verify the latest deployment
+    - View the service revision
+    - View the latest image
+    - view the build triggers (`gcloud beta builds triggers`)
+    - view the build logs
