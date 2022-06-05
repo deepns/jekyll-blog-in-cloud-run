@@ -132,15 +132,344 @@ COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 ## Step 4
 
-- Setting up Google Cloud. Components
+- Continuing from the previous step
+- The container image we built in the previous step is almost ready to be run, with one pending change. It still listens on port 80. The default port exposed on the containers in Cloud Run is 8080. This can be customized too and there are ways to update the nginx conf file during container startup (this is for a later time). Updating the port number from **80** to **8080**
+
+```conf
+server {
+    listen       8080;
+    listen  [::]:8080;
+    server_name  localhost;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+}
+```
+
+- The following components are used in running this container image. 
     - Cloud Run
-    - Container Registry or Artifact Registry
-- Update the nginx listening port
+    - Container Registry (or Artifact Registry)
+- APIs for these components need to be enabled in the GCP project in which the container is going to be deployed.
+
 - Build the image 
+
+```console
+$ docker build --tag gcr.io/$GOOGLE_CLOUD_PROJECT/cloudrunblog:v1 .
+Sending build context to Docker daemon  1.321MB
+Step 1/11 : FROM ruby as jekyll-build
+latest: Pulling from library/ruby
+e756f3fdd6a3: Pull complete
+bf168a674899: Pull complete
+e604223835cc: Pull complete
+6d5c91c4cd86: Pull complete
+2cc8d8854262: Pull complete
+93489d0e74dc: Pull complete
+d2347a2837e9: Pull complete
+1ed399612fd5: Pull complete
+Digest: sha256:af018e85cfae54a8d4c803640663e26232f49f31bfbe8b876e678e5365bc13ff
+Status: Downloaded newer image for ruby:latest
+ ---> 5bfd2dfe01e7
+Step 2/11 : RUN gem install bundler
+ ---> Running in 4092ad57f3f6
+Successfully installed bundler-2.3.15
+1 gem installed
+Removing intermediate container 4092ad57f3f6
+ ---> d632f4cee0bc
+Step 3/11 : WORKDIR /work
+ ---> Running in a88f45db5b51
+Removing intermediate container a88f45db5b51
+ ---> 81c6a360d828
+Step 4/11 : COPY Gemfile* /work/
+ ---> 936a5af55fa0
+Step 5/11 : RUN bundle install
+ ---> Running in 2e488378deb1
+Bundler 2.3.15 is running, but your lockfile was generated with 2.3.14. Installing Bundler 2.3.14 and restarting using that version.
+Fetching gem metadata from https://rubygems.org/.
+Fetching bundler 2.3.14
+Installing bundler 2.3.14
+Fetching gem metadata from https://rubygems.org/.........
+Using bundler 2.3.14
+Fetching colorator 1.1.0
+Fetching public_suffix 4.0.7
+Fetching concurrent-ruby 1.1.10
+Fetching eventmachine 1.2.7
+Installing colorator 1.1.0
+Installing public_suffix 4.0.7
+Installing eventmachine 1.2.7 with native extensions
+Fetching http_parser.rb 0.8.0
+Installing concurrent-ruby 1.1.10
+Fetching faraday-net_http 2.0.3
+Installing faraday-net_http 2.0.3
+Using ruby2_keywords 0.0.5
+Fetching ffi 1.15.5
+Installing http_parser.rb 0.8.0 with native extensions
+Fetching forwardable-extended 2.6.0
+Installing ffi 1.15.5 with native extensions
+Installing forwardable-extended 2.6.0
+Fetching rb-fsevent 0.11.1
+Installing rb-fsevent 0.11.1
+Using rexml 3.2.5
+Fetching liquid 4.0.3
+Installing liquid 4.0.3
+Fetching mercenary 0.4.0
+Installing mercenary 0.4.0
+Fetching rouge 3.29.0
+Installing rouge 3.29.0
+Fetching safe_yaml 1.0.5
+Installing safe_yaml 1.0.5
+Fetching unicode-display_width 1.8.0
+Installing unicode-display_width 1.8.0
+Fetching jekyll-paginate 1.1.0
+Installing jekyll-paginate 1.1.0
+Fetching addressable 2.8.0
+Installing addressable 2.8.0
+Fetching faraday 2.3.0
+Installing faraday 2.3.0
+Fetching i18n 1.10.0
+Installing i18n 1.10.0
+Fetching pathutil 0.16.2
+Installing pathutil 0.16.2
+Fetching kramdown 2.4.0
+Installing kramdown 2.4.0
+Fetching terminal-table 2.0.0
+Installing terminal-table 2.0.0
+Fetching sawyer 0.9.1
+Installing sawyer 0.9.1
+Fetching kramdown-parser-gfm 1.1.0
+Installing kramdown-parser-gfm 1.1.0
+Fetching octokit 4.23.0
+Installing octokit 4.23.0
+Fetching jekyll-gist 1.5.0
+Installing jekyll-gist 1.5.0
+Fetching sassc 2.4.0
+Fetching rb-inotify 0.10.1
+Installing rb-inotify 0.10.1
+Fetching listen 3.7.1
+Installing sassc 2.4.0 with native extensions
+Installing listen 3.7.1
+Fetching jekyll-watch 2.2.1
+Installing jekyll-watch 2.2.1
+Fetching em-websocket 0.5.3
+Installing em-websocket 0.5.3
+Fetching jekyll-sass-converter 2.2.0
+Installing jekyll-sass-converter 2.2.0
+Fetching jekyll 4.2.2
+Installing jekyll 4.2.2
+Fetching jekyll-feed 0.16.0
+Fetching jekyll-include-cache 0.2.1
+Fetching jekyll-seo-tag 2.8.0
+Fetching jekyll-sitemap 1.4.0
+Installing jekyll-seo-tag 2.8.0
+Installing jekyll-include-cache 0.2.1
+Installing jekyll-feed 0.16.0
+Installing jekyll-sitemap 1.4.0
+Fetching minima 2.5.1
+Fetching minimal-mistakes-jekyll 4.24.0
+Installing minima 2.5.1
+Installing minimal-mistakes-jekyll 4.24.0
+Bundle complete! 8 Gemfile dependencies, 41 gems now installed.
+Use `bundle info [gemname]` to see where a bundled gem is installed.
+Removing intermediate container 2e488378deb1
+ ---> fba47483cb38
+Step 6/11 : COPY . .
+ ---> 30927ea099ac
+Step 7/11 : ENV JEKYLL_ENV=production
+ ---> Running in c15d02262ec3
+Removing intermediate container c15d02262ec3
+ ---> b69f49561f8d
+Step 8/11 : RUN bundle exec jekyll build
+ ---> Running in b0c2bb02488d
+Configuration file: /work/_config.yml
+To use retry middleware with Faraday v2.0+, install `faraday-retry` gem
+            Source: /work
+       Destination: /work/_site
+ Incremental build: disabled. Enable with --incremental
+      Generating...
+       Jekyll Feed: Generating feed for posts
+                    done in 1.449 seconds.
+ Auto-regeneration: disabled. Use --watch to enable.
+Removing intermediate container b0c2bb02488d
+ ---> 6c0ab72680b9
+Step 9/11 : FROM nginx
+latest: Pulling from library/nginx
+42c077c10790: Pull complete
+62c70f376f6a: Pull complete
+915cc9bd79c2: Pull complete
+75a963e94de0: Pull complete
+7b1fab684d70: Pull complete
+db24d06d5af4: Pull complete
+Digest: sha256:2bcabc23b45489fb0885d69a06ba1d648aeda973fae7bb981bafbb884165e514
+Status: Downloaded newer image for nginx:latest
+ ---> 0e901e68141f
+Step 10/11 : COPY --from=jekyll-build  /work/_site /usr/share/nginx/html
+ ---> b506e7436fc1
+Step 11/11 : COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
+ ---> 66a186f8c671
+Successfully built 66a186f8c671
+Successfully tagged gcr.io/cloud-run-experiments-350118/cloudrunblog:v1
+deepan_seeralan@cloudshell:~/github/jekyll-blog-on-gcp-cloud-run (cloud-run-experiments-350118)$
+
+$ docker images
+REPOSITORY                                         TAG       IMAGE ID       CREATED              SIZE
+gcr.io/cloud-run-experiments-350118/cloudrunblog   v1        66a186f8c671   About a minute ago   143MB
+ruby                                               latest    5bfd2dfe01e7   7 days ago           892MB
+nginx                                              latest    0e901e68141f   7 days ago           142MB
+```
+
+- Tagging the image for convenience
+
+```console
+$ docker image tag gcr.io/cloud-run-experiments-350118/cloudrunblog:v1 gcr.io/cloud-run-experiments-350118/cloudrunblog:latest
+
+$ docker images
+REPOSITORY                                         TAG       IMAGE ID       CREATED         SIZE
+gcr.io/cloud-run-experiments-350118/cloudrunblog   latest    66a186f8c671   2 minutes ago   143MB
+gcr.io/cloud-run-experiments-350118/cloudrunblog   v1        66a186f8c671   2 minutes ago   143MB
+ruby                                               latest    5bfd2dfe01e7   7 days ago      892MB
+nginx                                              latest    0e901e68141f   7 days ago      142MB
+```
+
 - Push the image to GCP artifact registry
+    - Configure docker to push to GCP container registry with `$ gcloud auth configure-docker `
+    - Push the image with `docker push <IMAGE:TAG>`
+
+```console
+$ docker push gcr.io/cloud-run-experiments-350118/cloudrunblog:latest
+The push refers to repository [gcr.io/cloud-run-experiments-350118/cloudrunblog]
+cbd9f90b5476: Pushed
+b1a5dd831e16: Pushed
+33e3df466e11: Layer already exists
+747b7a567071: Layer already exists
+57d3fc88cb3f: Layer already exists
+53ae81198b64: Layer already exists
+58354abe5f0e: Layer already exists
+ad6562704f37: Layer already exists
+latest: digest: sha256:a8fcf183d1163167f8dbedc4371a2ccee72379be084fd3384255953a9fd80898 size: 1987
+```
+
 - Deploy a cloud run service
+    - Set the region
+    - Deploy the service
+        - what are the parameters needed?
+            - `platform`
+            - `allow-unauthenticated`
+
+```console
+$ gcloud config set run/region us-central1
+Updated property [run/region].
+
+$  gcloud run deploy cloudrunblog \
+> --platform managed \
+> --image gcr.io/$GOOGLE_CLOUD_PROJECT/cloudrunblog:latest \
+> --allow-unauthenticated
+Deploying container to Cloud Run service [cloudrunblog] in project [cloud-run-experiments-350118] region [us-central1]
+OK Deploying new service... Done.                                       
+  OK Creating Revision... Initializing project for the current region.
+  OK Routing traffic...
+  OK Setting IAM Policy...
+Done.
+Service [cloudrunblog] revision [cloudrunblog-00001-zep] has been deployed and is serving 100 percent of traffic.
+Service URL: https://cloudrunblog-sxydtth3hq-uc.a.run.app
+```
+
 - Make edits
-- Build. Push. Deploy
+    - Changed the date of the post
+    - Build again, with a new tag `$ docker build --tag gcr.io/$GOOGLE_CLOUD_PROJECT/cloudrunblog:v2 .`
+    - Retag to latest 
+    - `$ docker image tag gcr.io/cloud-run-experiments-350118/cloudrunblog:v2 gcr.io/cloud-run-experiments-350118/cloudrunblog:latest`
+
+```console
+$ docker images
+REPOSITORY                                         TAG       IMAGE ID       CREATED              SIZE
+gcr.io/cloud-run-experiments-350118/cloudrunblog   latest    078f42c45c6d   About a minute ago   143MB
+gcr.io/cloud-run-experiments-350118/cloudrunblog   v2        078f42c45c6d   About a minute ago   143MB
+gcr.io/cloud-run-experiments-350118/cloudrunblog   v1        66a186f8c671   16 minutes ago       143MB
+ruby                                               latest    5bfd2dfe01e7   7 days ago           892MB
+nginx                                              latest    0e901e68141f   7 days ago           142MB
+```
+    
+- Push
+
+```console
+$ docker push gcr.io/cloud-run-experiments-350118/cloudrunblog:latest
+The push refers to repository [gcr.io/cloud-run-experiments-350118/cloudrunblog]
+8e26bca3dbf8: Pushed
+b4171161e9bc: Pushed
+33e3df466e11: Layer already exists
+747b7a567071: Layer already exists
+57d3fc88cb3f: Layer already exists
+53ae81198b64: Layer already exists
+58354abe5f0e: Layer already exists
+ad6562704f37: Layer already exists
+latest: digest: sha256:4d0c2e3c190ec538552f253c4062c9e5a9acec0a8396182ce75ddf3bbfa41263 size: 1987
+
+$ gcloud container images list-tags gcr.io/cloud-run-experiments-350118/cloudrunblog
+DIGEST: 4d0c2e3c190e
+TAGS: latest
+
+DIGEST: a8fcf183d116
+TAGS:
+```
+
+- Update the image
+
+```console
+$ gcloud run services update \
+> cloudrunblog \
+> --image gcr.io/$GOOGLE_CLOUD_PROJECT/cloudrunblog
+OK Deploying... Done.                                         
+  OK Creating Revision...
+  OK Routing traffic...
+Done.
+Service [cloudrunblog] revision [cloudrunblog-00002-tod] has been deployed and is serving 100 percent of traffic.
+Service URL: https://cloudrunblog-sxydtth3hq-uc.a.run.app
+```
+
+- Checking the revisions and making sure that the latest revision is active
+
+```console
+$ gcloud run revisions list --service cloudrunblog
+✔
+REVISION: cloudrunblog-00002-tod
+ACTIVE: yes
+SERVICE: cloudrunblog
+DEPLOYED: 2022-06-05 02:59:48 UTC
+DEPLOYED BY: xxxxx.xxxxxxx@gmail.com
+
+✔
+REVISION: cloudrunblog-00001-zep
+ACTIVE:
+SERVICE: cloudrunblog
+DEPLOYED: 2022-06-05 02:46:42 UTC
+DEPLOYED BY: xxxxxx.xxxxxxx@gmail.com
+```
+
+- Clean up the old images
+
+```console
+$ gcloud container images list-tags gcr.io
+/cloud-run-experiments-350118/cloudrunblog                                                                                            
+DIGEST: 4d0c2e3c190e                                                                                                                     
+TAGS: latest                                                                                                                        
+                                                                                                                                         
+DIGEST: a8fcf183d116                                                                                        
+TAGS: 
+
+$ gcloud container images delete gcr.io/$GOOGLE_CLOUD_PROJECT/cloudrunblog@sha256:a8fcf183d116
+Digests:
+- gcr.io/cloud-run-experiments-350118/cloudrunblog@sha256:a8fcf183d1163167f8dbedc4371a2ccee72379be084fd3384255953a9fd80898
+This operation will delete the tags and images identified by the digests above.
+
+Do you want to continue (Y/n)?  y
+
+Deleted [gcr.io/cloud-run-experiments-350118/cloudrunblog@sha256:a8fcf183d1163167f8dbedc4371a2ccee72379be084fd3384255953a9fd80898].
+
+$ gcloud container images list-tags gcr.io/$GOOGLE_CLOUD_PROJECT/cloudrunblog
+DIGEST: 4d0c2e3c190e
+TAGS: latest
+```
 
 ## Step 5
 
