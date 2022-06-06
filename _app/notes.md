@@ -309,7 +309,6 @@ Step 11/11 : COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
  ---> 66a186f8c671
 Successfully built 66a186f8c671
 Successfully tagged gcr.io/cloud-run-experiments-350118/cloudrunblog:v1
-deepan_seeralan@cloudshell:~/github/jekyll-blog-on-gcp-cloud-run (cloud-run-experiments-350118)$
 
 $ docker images
 REPOSITORY                                         TAG       IMAGE ID       CREATED              SIZE
@@ -480,15 +479,214 @@ TAGS: latest
     - Authenticate with Github
     - Add connected repositories
     - Specify build configuration (branch and Dockerfile)
-- This creates a Cloud Build trigger to do the following steps when a new commit is pushed to the specified branch (pretty much the same steps as what described in [manual steps](https://cloud.google.com/build/docs/deploying-builds/deploy-cloud-run))
+- This creates a Cloud Build trigger to do the following steps when a new commit is pushed to the specified branch (pretty much the same steps as what described in [manual steps](https://cloud.google.com/build/docs/deploying-builds/deploy-cloud-run)). Alternatively this can be achieved with cloudbuild files too.
     - Build the image
     - Push the image to container registry
     - Deploy the image to the service
+
+```console
+$ gcloud beta builds triggers list
+---                                       
+build:        
+  images:                                                   
+  - $_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+  options:
+    substitutionOption: ALLOW_LOOSE
+  steps:
+  - args:
+    - build
+    - --no-cache
+    - -t
+    - $_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    - .
+    - -f
+    - Dockerfile
+    id: Build
+    name: gcr.io/cloud-builders/docker
+  - args:
+    - push
+    - $_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    id: Push
+    name: gcr.io/cloud-builders/docker
+  - args:
+    - run
+    - services
+    - update
+    - $_SERVICE_NAME
+    - --platform=managed
+    - --image=$_GCR_HOSTNAME/$PROJECT_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID,$_LABELS
+    - --region=$_DEPLOY_REGION
+    - --quiet
+    entrypoint: gcloud
+    id: Deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+  substitutions:
+    _DEPLOY_REGION: us-central1
+    _GCR_HOSTNAME: us.gcr.io
+    _LABELS: gcb-trigger-id=08a2985a-a449-43f7-bd5b-342b95c90861
+    _PLATFORM: managed
+    _SERVICE_NAME: cloudrunblog
+    _TRIGGER_ID: 08a2985a-a449-43f7-bd5b-342b95c90861
+  tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+  - cloudrunblog
+createTime: '2022-06-06T11:32:17.951687163Z'
+description: Build and deploy to Cloud Run service cloudrunblog on push to "^main$"
+github:
+  name: jekyll-blog-in-cloud-run
+  owner: deepns
+  push:
+    branch: ^main$
+id: 08a2985a-a449-43f7-bd5b-342b95c90861
+name: rmgpgab-cloudrunblog-us-central1-deepns-jekyll-blog-in-cloudpph
+substitutions:
+  _DEPLOY_REGION: us-central1
+  _GCR_HOSTNAME: us.gcr.io
+  _LABELS: gcb-trigger-id=08a2985a-a449-43f7-bd5b-342b95c90861
+  _PLATFORM: managed
+  _SERVICE_NAME: cloudrunblog
+  _TRIGGER_ID: 08a2985a-a449-43f7-bd5b-342b95c90861
+tags:
+- gcp-cloud-build-deploy-cloud-run
+- gcp-cloud-build-deploy-cloud-run-managed
+- cloudrunblog
+    
+$ gcloud beta builds list --ongoing
+ID: 77c565fa-27fe-410d-9054-4784221e4a8a
+CREATE_TIME: 2022-06-06T11:32:19+00:00
+DURATION: 1M44S
+SOURCE: -
+IMAGES: -
+STATUS: WORKING
+
+$ gcloud beta builds describe 77c565fa-27fe-410d-9054-4784221e4a8a
+artifacts:
+  images:
+  - us.gcr.io/cloud-run-experiments-350118/jekyll-blog-in-cloud-run/cloudrunblog:4dec0d1e704d3c7900ee2353e618e5656a23516f
+buildTriggerId: 08a2985a-a449-43f7-bd5b-342b95c90861
+createTime: '2022-06-06T11:32:19.768678299Z'
+id: 77c565fa-27fe-410d-9054-4784221e4a8a
+images:
+- us.gcr.io/cloud-run-experiments-350118/jekyll-blog-in-cloud-run/cloudrunblog:4dec0d1e704d3c7900ee2353e618e5656a23516f
+logUrl: https://console.cloud.google.com/cloud-build/builds/77c565fa-27fe-410d-9054-4784221e4a8a?project=365657743345
+logsBucket: gs://365657743345.cloudbuild-logs.googleusercontent.com
+name: projects/365657743345/locations/global/builds/77c565fa-27fe-410d-9054-4784221e4a8a
+options:
+  dynamicSubstitutions: true
+  logging: LEGACY
+  pool: {}
+  substitutionOption: ALLOW_LOOSE
+projectId: cloud-run-experiments-350118
+queueTtl: 3600s
+source: {}
+startTime: '2022-06-06T11:32:20.582660714Z'
+status: WORKING
+steps:
+- args:
+  - build
+  - --no-cache
+  - -t
+  - us.gcr.io/cloud-run-experiments-350118/jekyll-blog-in-cloud-run/cloudrunblog:4dec0d1e704d3c7900ee2353e618e5656a23516f
+  - .
+  - -f
+  - Dockerfile
+  id: Build
+  name: gcr.io/cloud-builders/docker
+- args:
+  - push
+  - us.gcr.io/cloud-run-experiments-350118/jekyll-blog-in-cloud-run/cloudrunblog:4dec0d1e704d3c7900ee2353e618e5656a23516f
+  id: Push
+  name: gcr.io/cloud-builders/docker
+- args:
+  - run
+  - services
+  - update
+  - cloudrunblog
+  - --platform=managed
+  - --image=us.gcr.io/cloud-run-experiments-350118/jekyll-blog-in-cloud-run/cloudrunblog:4dec0d1e704d3c7900ee2353e618e5656a23516f
+  - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=4dec0d1e704d3c7900ee2353e618e5656a23516f,gcb-build-id=77c565fa-27fe-410d-9054-4784221e4a8a,gcb-trigger-id=08a2985a-a449-43f7-bd5b-342b95c90861,gcb-trigger-id=08a2985a-a449-43f7-bd5b-342b95c90861
+  - --region=us-central1
+  - --quiet
+  entrypoint: gcloud
+  id: Deploy
+  name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+substitutions:
+  BRANCH_NAME: main
+  COMMIT_SHA: 4dec0d1e704d3c7900ee2353e618e5656a23516f
+  REF_NAME: main
+  REPO_NAME: jekyll-blog-in-cloud-run
+  REVISION_ID: 4dec0d1e704d3c7900ee2353e618e5656a23516f
+  SHORT_SHA: 4dec0d1
+  TRIGGER_BUILD_CONFIG_PATH: ''
+  TRIGGER_NAME: rmgpgab-cloudrunblog-us-central1-deepns-jekyll-blog-in-cloudpph
+  _DEPLOY_REGION: us-central1
+  _GCR_HOSTNAME: us.gcr.io
+  _LABELS: gcb-trigger-id=08a2985a-a449-43f7-bd5b-342b95c90861
+  _PLATFORM: managed
+  _SERVICE_NAME: cloudrunblog
+  _TRIGGER_ID: 08a2985a-a449-43f7-bd5b-342b95c90861
+tags:
+- gcp-cloud-build-deploy-cloud-run
+- gcp-cloud-build-deploy-cloud-run-managed
+- cloudrunblog
+- trigger-08a2985a-a449-43f7-bd5b-342b95c90861
+timeout: 600s
+
+```
+
 - UI makes the job little easier here. 
 - Steps to capture
     - Set up continuous deployment
     - Verify the latest deployment
+
+```console
+$ gcloud run services list
+✔
+SERVICE: cloudrunblog
+REGION: us-central1
+URL: https://cloudrunblog-sxydtth3hq-uc.a.run.app
+LAST DEPLOYED BY: 365657743345@cloudbuild.gserviceaccount.com
+LAST DEPLOYED AT: 2022-06-06T11:35:40.358723Z
+
+$ gcloud run revisions list 
+✔
+REVISION: cloudrunblog-00003-run
+ACTIVE: yes
+SERVICE: cloudrunblog
+DEPLOYED: 2022-06-06 11:35:22 UTC
+DEPLOYED BY: 365657743345@cloudbuild.gserviceaccount.com
+
+✔
+REVISION: cloudrunblog-00002-tod
+ACTIVE:
+SERVICE: cloudrunblog
+DEPLOYED: 2022-06-05 02:59:48 UTC
+DEPLOYED BY: xxxxx.xxxxxxxx@gmail.com
+
+✔
+REVISION: cloudrunblog-00001-zep
+ACTIVE:
+SERVICE: cloudrunblog
+DEPLOYED: 2022-06-05 02:46:42 UTC
+DEPLOYED BY: xxxxx.xxxxxxxx@gmail.com
+```
+
     - View the service revision
     - View the latest image
+
+```console
+$ gcloud run services describe cloudrunblog --format=json | jq '.spec.template.spec.containers[].image'
+"us.gcr.io/cloud-run-experiments-350118/jekyll-blog-in-cloud-run/cloudrunblog:4dec0d1e704d3c7900ee2353e618e5656a23516f"
+
+$ gcloud artifacts docker tags  list 
+Listing items under project cloud-run-experiments-350118, location us, repository us.gcr.io.
+
+TAG: 4dec0d1e704d3c7900ee2353e618e5656a23516f
+IMAGE: us-docker.pkg.dev/cloud-run-experiments-350118/us.gcr.io/jekyll-blog-in-cloud-run/cloudrunblog
+DIGEST: sha256:c2c001aca7caf7b422e5effeb0c5fc55f887d22a84c0dc9427338f9a549b8136
+```
+
     - view the build triggers (`gcloud beta builds triggers`)
     - view the build logs
