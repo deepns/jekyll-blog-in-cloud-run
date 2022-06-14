@@ -389,4 +389,4 @@ There are some ways to customize this behavior further:
 - [Configure](https://cloud.google.com/run/docs/configuring/containers#command-line) the Cloud Run service to listen on required port number.
 - Configure the application to listen on the port specified in **$PORT** variable (Cloud Run injects the PORT environment variable into the container). With nginx, we can use nginx config templates to update the config file to listen on port specified in $PORT. More on this later.
 
-Part-2 will be all about exploring Cloud Run, its associated GCP solutions (Cloud Builds, Container Registry, Artifact Registry etc) and deploy the above image in Cloud Run.
+Part-2 will be all about exploring Cloud Run, its associated GCP components (Cloud Builds, Container Registry, Artifact Registry, gcloud CLI etc.) and deploy the above image in Cloud Run.
