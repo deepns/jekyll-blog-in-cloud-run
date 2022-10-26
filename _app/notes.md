@@ -132,6 +132,18 @@ COPY _app/etc/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 ## Step 4
 
+Next steps
+
+- [x] Revisit the below steps again. Run them
+  - [x] Overview on the needed components
+  - [x] Tag the image
+  - [x] Push the image (push only v1 or v1 and latest? how is it handled in GCR?)
+  - [x] Deploy to cloud run
+  - [x] Make edits
+  - [x] Re-deploy
+- [x] Part 3
+  - [x] Enabling CI/CD
+
 - Continuing from the previous step
 - The container image we built in the previous step is almost ready to be run, with one pending change. It still listens on port 80. The default port exposed on the containers in Cloud Run is 8080. This can be customized too and there are ways to update the nginx conf file during container startup (this is for a later time). Updating the port number from **80** to **8080**
 
@@ -388,7 +400,7 @@ gcr.io/cloud-run-experiments-350118/cloudrunblog   v1        66a186f8c671   16 m
 ruby                                               latest    5bfd2dfe01e7   7 days ago           892MB
 nginx                                              latest    0e901e68141f   7 days ago           142MB
 ```
-    
+
 - Push
 
 ```console
