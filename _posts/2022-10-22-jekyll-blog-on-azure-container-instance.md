@@ -29,7 +29,24 @@ Drafting the post
   - ACI
 - comparison with gcp cloud run
 
+After playing with hosting a jekyll site on GCP Cloud Run, I was curious to see how similar deployments can be done in other cloud providers. So started my exploration with Azure. Since the site was already built as a container image, I just needed a way to publish the image and run the container. Azure Container Instance offered pretty much what I was looking for.
+
+Assuming that Azure account and subscriptions are set up, these are steps in the workflow needed to deploy a jekyll site in Azure Container Instance.
+
+1. Create a resource group (having a separate resource group for this deployment for easier management)
+2. Create a private registry in [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
+3. Push the image from local machine to Azure Container Registry
+4. Deploy the container
+   1. Create a service principal for azure container instance to access the image from the registry
+   2. Create the container
+
+In the GCP exercise, I was able to do all the steps from the GCP Cloud Shell VM itself. Truly cloud. Unlike GCP, Cloud Shell VM in Azure Portal had some limitations (e.g. no docker). I used my local machine to build the image and used [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos) to access and manage the Azure resources. So from tools perspective, Azure CLI was the only additional thing to install.
+
+Diving into the steps now.
+
 ## Create resource group
+
+Creating a new resource group in `eastus` [region](https://azure.microsoft.com/en-gb/explore/global-infrastructure/geographies/#choose-your-region)
 
 ```text
 ➜  ~ az group create --name az-learn --location eastus
@@ -48,8 +65,10 @@ Drafting the post
 
 ## Create container registry
 
-- `--name` must be specified in lower case, alpha numeric and globally unique within the Azure Container Registry
-- `Basic` sku is good enough for this exercise
+Creating a new container registry under the resource group just created (`az-learn`)
+
+- `--name` of the registry must be specified in lower case, alpha numeric and globally unique within the Azure Container Registry
+- Going with `Basic` sku for this exercise. The default storage (10GB) and image throughput is good enough for this requirement. More about ACR Skus [here](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-skus).
 
 ```text
 ➜  ~ az acr create --resource-group az-learn --name jekyllblogacr --sku Basic --output table
@@ -60,9 +79,11 @@ jekyllblogacr  az-learn          eastus      Basic  jekyllblogacr.azurecr.io  20
 
 ## Upload the image to the azure container registry
 
+Image was already built in the using the steps in [previous experiment](https://www.deepanseeralan.com/tech/hosting-jekyll-site-in-gcp-cloud-run/#step-4---building-jekyll-site-and-nginx-image-together). To push the image to the azure container registry, the image tag should be in the right format.
+
 ### Tag the image
 
-- need to tag the image in the format `<loginServer>/<imageName>.<tag>`
+- Tagging the image in the format `<loginServer>/<imageName>.<tag>`
 
 ```text
 ➜  ~ docker images
@@ -70,9 +91,6 @@ REPOSITORY                    TAG       IMAGE ID       CREATED        SIZE
 jekyll-blog-aci               v1        e0fbf509394b   2 days ago     143MB
 
 ➜  ~ docker image tag jekyll-blog-aci:v1 jekyllblogacr.azurecr.io/jekyll-blog-aci:v1
-➜  ~ az acr login --name jekyllblogacr.azurecr.io
-The login server endpoint suffix '.azurecr.io' is automatically omitted.
-Login Succeeded
 
 ➜  ~ docker images
 REPOSITORY                                 TAG       IMAGE ID       CREATED        SIZE
@@ -82,7 +100,13 @@ jekyllblogacr.azurecr.io/jekyll-blog-aci   v1        e0fbf509394b   2 days ago  
 
 ### Push the image
 
+Need to login to the registry (using `az acr login`) so **docker push** can do its job.
+
 ```text
+➜  ~ az acr login --name jekyllblogacr.azurecr.io
+The login server endpoint suffix '.azurecr.io' is automatically omitted.
+Login Succeeded
+
 ➜  ~ docker push jekyllblogacr.azurecr.io/jekyll-blog-aci:v1
 The push refers to repository [jekyllblogacr.azurecr.io/jekyll-blog-aci]
 7badbf2daded: Pushed
@@ -103,6 +127,46 @@ CreatedTime                   Digest                                            
 
 ## Create service principal
 
+Followed the steps from [here](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-auth-aci) to create a Azure AD service principal. Modified the script from there slightly to suit my needs.
+
+```bash
+#!/bin/bash
+# This script requires Azure CLI version 2.25.0 or later. Check version with `az --version`.
+
+# Modify for your environment.
+# ACR_NAME: The name of your Azure Container Registry
+# SERVICE_PRINCIPAL_NAME: Must be unique within your AD tenant
+ACR_NAME=${ACR_NAME:-jekyllblog}
+SERVICE_PRINCIPAL_NAME=${SERVICE_PRINCIPAL_NAME:-jekyllblogaci}
+
+echo "Creating a service principal $SERVICE_PRINCIPAL_NAME to $ACR_NAME"
+
+# Obtain the full registry ID
+ACR_REGISTRY_ID=$(az acr show --name $ACR_NAME --query "id" --output tsv)
+# echo $registryId
+
+# Create the service principal with rights scoped to the registry.
+# Default permissions are for docker pull access. Modify the '--role'
+# argument value as desired:
+# acrpull:     pull only
+# acrpush:     push and pull
+# owner:       push, pull, and assign roles
+PASSWORD=$(az ad sp create-for-rbac \
+            --name $SERVICE_PRINCIPAL_NAME \
+            --scopes $ACR_REGISTRY_ID \
+            --role acrpull \
+            --query "password" \
+            --output tsv)
+USER_NAME=$(az ad sp list \
+            --display-name $SERVICE_PRINCIPAL_NAME \
+            --query "[].appId" --output tsv)
+
+# Output the service principal's credentials; use these in your services and
+# applications to authenticate to the container registry.
+echo "Service principal ID: $USER_NAME"
+echo "Service principal password: $PASSWORD"
+```
+
 ```text
 ➜  ~  ACR_NAME=jekyllblogacr SERVICE_PRINCIPAL_NAME=jekyllblogacr-sp ./_app/az_create_service_principal.sh
 Creating a service principal jekyllblogacr-sp to jekyllblogacr
@@ -114,7 +178,12 @@ Service principal password: YBi8Q~jXpqCLBeuFwZimzKOYHw3rwdQb7ogSxaYT
 
 ## Create the container instance
 
-Using the service principal details obtained in the previous step, create the container instance
+Putting together all actions thus far, create a container 
+
+- with image from the azure container registry
+- accessed using the Azure AD service principal username and password
+- with 1 CPU and 1G of memory (enough for testing purposes)
+- with a public IP, exposed at port 80
 
 ```text
 ➜  ~ az container list --resource-group az-learn
@@ -156,15 +225,18 @@ jekyllblog-aci  az-learn         Succeeded  jekyllblogacr.azurecr.io/jekyll-blog
 ➜  ~
 ```
 
-## Cost analysis
-
 ## Cleanup the resources
+
+Most important step! I burnt few dollars leaving my container instances running for a few days.
 
 ```text
 ➜  ~ az group delete --resource-group az-learn
 Are you sure you want to perform this operation? (y/n): y
+```
 
-➜  ~ # just some sanity checks after deleting the group
+Just some sanity checks after deleting the group
+
+```text
 ➜  ~ az acr list --resource-group az-learn --output table
 (ResourceGroupNotFound) Resource group 'az-learn' could not be found.
 Code: ResourceGroupNotFound
@@ -176,3 +248,12 @@ Code: ResourceGroupNotFound
 Message: Resource group 'az-learn' could not be found.
 ➜  ~
 ```
+
+## Summary
+
+For this particular use case of deploying a jekyll based static site, I found GCP Cloud Run much more suitable than Azure Container Instance. Some observations from my experiments.
+
+- Default behavior in CLoud Run is to allocate CPU only during request processing, container startup and shutdown
+- GCP Cloud Run free tier itself offers plenty of resources, can easily be more than sufficient for sites with very low traffic
+- Azure Cost // TBD
+- TLS enabled - free https support - cloud run instances are front-ended by Cloud Run (to be rephrased)
