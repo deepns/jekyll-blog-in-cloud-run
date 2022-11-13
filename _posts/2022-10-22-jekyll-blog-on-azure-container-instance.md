@@ -251,9 +251,14 @@ Message: Resource group 'az-learn' could not be found.
 
 ## Summary
 
-For this particular use case of deploying a jekyll based static site, I found GCP Cloud Run much more suitable than Azure Container Instance. Some observations from my experiments.
+For this particular use case of deploying a jekyll based static site, I found GCP Cloud Run much more suitable than Azure Container Instances. Some observations from my experiments.
 
-- Default behavior in CLoud Run is to allocate CPU only during request processing, container startup and shutdown
-- GCP Cloud Run free tier itself offers plenty of resources, can easily be more than sufficient for sites with very low traffic
-- Azure Cost // TBD
-- TLS enabled - free https support - cloud run instances are front-ended by Cloud Run (to be rephrased)
+- **Resource Allocation**
+  - By default, Cloud Run [allocates CPU only](https://cloud.google.com/run/docs/configuring/cpu-allocation) during request processing, container startup and shutdown times. Containers are automatically shutdown after a brief period of no requests (**scale to zero model**). Whereas containers are left running by default in ACI. This directly impacts the billing as well.
+  - No significant difference in latency between the Cloud Run and ACI instances during these experiments. This is application specific behavior though. Container startup times will directly impact the first request processing.
+- **Cost analysis**
+  - GCP free tier was very well sufficient to run these experiments so additional costs incurred. GCP Artifact Registry includes 500MB of storage. With occasional push and pull ops to the artifact registry and ~150MB of container image, free limit of GCP Artifact Registry was never reached.
+  - Likewise, Cloud Run access was well within the [free tier limit](https://cloud.google.com/run#section-13). Cloud Run comes with 2 million requests per month and CPU and memory cycles incurred during the request processing were also well within the limit (180000 vCPU seconds/month, 360000 GiB-seconds/month).
+- **https support**
+  - Cloud Run manages TLS for the container instances, comes with a unique HTTPS endpoint in `*.run.app` domain.
+  - ACI too comes with a HTTPS endpoint, however the onus falls on the application to manage the TLS connections and certificates.
