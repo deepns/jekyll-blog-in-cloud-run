@@ -23,11 +23,13 @@ Assuming that Azure account and subscriptions are set up, these are steps in the
    1. Create a service principal for azure container instance to access the image from the registry
    2. Create the container
 
-In the GCP exercise, I was able to do all the steps from the GCP Cloud Shell VM itself. Truly cloud. Unlike GCP, Cloud Shell VM in Azure Portal had some limitations (e.g. no docker). I used my local machine to build the image and used [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos) to access and manage the Azure resources. So from tools perspective, Azure CLI was the only additional thing to install.
+In the GCP exercise, I was able to do all the steps from the GCP Cloud Shell VM itself. Truly cloud. Unlike GCP, Cloud Shell VM in Azure Portal had some limitations (e.g. no docker 😔). I used my local machine to build the image and used [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos) to access and manage the Azure resources.
 
 Diving into the steps now.
 
 ## Create resource group
+
+Every resource in Azure is grouped under a resource group. So starting with creating a resource group first.
 
 Creating a new resource group in `eastus` [region](https://azure.microsoft.com/en-gb/explore/global-infrastructure/geographies/#choose-your-region)
 
@@ -83,7 +85,7 @@ jekyllblogacr.azurecr.io/jekyll-blog-aci   v1        e0fbf509394b   2 days ago  
 
 ### Push the image
 
-Need to login to the registry (using `az acr login`) so **docker push** can do its job.
+Need to login to the registry (using `az acr login`) so **docker push** can do its job. (note: access token received through this login expires after 3 hours)
 
 ```text
 ➜  ~ az acr login --name jekyllblogacr.azurecr.io
@@ -114,6 +116,10 @@ Followed the steps from [here](https://learn.microsoft.com/en-us/azure/container
 
 ```bash
 #!/bin/bash
+
+# Script pulled from https://learn.microsoft.com/en-us/azure/container-registry/container-registry-auth-aci
+# and modified slightly for my convenience.
+
 # This script requires Azure CLI version 2.25.0 or later. Check version with `az --version`.
 
 # Modify for your environment.
@@ -126,7 +132,7 @@ echo "Creating a service principal $SERVICE_PRINCIPAL_NAME to $ACR_NAME"
 
 # Obtain the full registry ID
 ACR_REGISTRY_ID=$(az acr show --name $ACR_NAME --query "id" --output tsv)
-# echo $registryId
+echo "ACR_REGISTRY_ID=$ACR_REGISTRY_ID"
 
 # Create the service principal with rights scoped to the registry.
 # Default permissions are for docker pull access. Modify the '--role'
@@ -161,7 +167,7 @@ Service principal password: YBi8Q~jXpqCLBeuFwZimzKOYHw3rwdQb7ogSxaYT
 
 ## Create the container instance
 
-Putting together all actions thus far, create a container 
+Putting together all actions thus far, create a container
 
 - with image from the azure container registry
 - accessed using the Azure AD service principal username and password
@@ -194,6 +200,13 @@ jekyllblog-aci  az-learn         Succeeded  jekyllblogacr.azurecr.io/jekyll-blog
 ➜  ~ az container show --resource-group az-learn --name jekyllblog-aci --query "ipAddress.fqdn"
 "jekyllblog-aci.eastus.azurecontainer.io"
 
+➜  ~ az container show --resource-group az-learn --name jekyll-blog-aci --query "{state:instanceView.state, ip:ipAddress.ip, fqdn: ipAddress.fqdn}"
+{
+  "fqdn": "jekyll-blog-aci.eastus.azurecontainer.io",
+  "ip": "20.241.152.103",
+  "state": "Running"
+}
+
 ➜  ~ curl --silent http://jekyllblog-aci.eastus.azurecontainer.io:80/ | head
 <!doctype html>
 <!--
@@ -210,7 +223,9 @@ jekyllblog-aci  az-learn         Succeeded  jekyllblogacr.azurecr.io/jekyll-blog
 
 ## Cleanup the resources
 
-Most important step! I burnt few dollars leaving my container instances running for a few days.
+Most important step! I burnt few dollars unncessarily leaving my container instances running for a few days.
+
+Delete all resources under the resource group just created.
 
 ```text
 ➜  ~ az group delete --resource-group az-learn
@@ -245,3 +260,4 @@ For this particular use case of deploying a jekyll based static site, I found GC
   - For the Linux containers, [ACI pricing](https://azure.microsoft.com/en-gb/pricing/details/container-registry/#pricing) charges $0.00445 per GB and $0.04050 per vCPU on the pay-as-you pricing. So it can end up in a $1.08 per day even for a container with bare minimum configuration of 1-vCPU and 1-GB memory. Container registry charges will be separate though.
 - **https support**
   - All Cloud Run instances come with a unique HTTPS endpoint in `*.run.app` domain. ACI too comes with a HTTPS endpoint, however the onus falls on the application to manage the TLS connections and certificates. With Cloud Run, this is more transparent as the services can continue to deliver over HTTP in the backend while getting full https support.
+  

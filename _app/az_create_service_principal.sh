@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# Script pulled from https://learn.microsoft.com/en-us/azure/container-registry/container-registry-auth-aci
+# and modified slightly for my convenience.
+
 # This script requires Azure CLI version 2.25.0 or later. Check version with `az --version`.
 
 # Modify for your environment.
@@ -11,7 +15,7 @@ echo "Creating a service principal $SERVICE_PRINCIPAL_NAME to $ACR_NAME"
 
 # Obtain the full registry ID
 ACR_REGISTRY_ID=$(az acr show --name $ACR_NAME --query "id" --output tsv)
-# echo $registryId
+echo "ACR_REGISTRY_ID=$ACR_REGISTRY_ID"
 
 # Create the service principal with rights scoped to the registry.
 # Default permissions are for docker pull access. Modify the '--role'
@@ -33,6 +37,3 @@ USER_NAME=$(az ad sp list \
 # applications to authenticate to the container registry.
 echo "Service principal ID: $USER_NAME"
 echo "Service principal password: $PASSWORD"
-
-# Service principal ID: 7cf8ac03-a73a-4d24-992e-f1d8c4b1d787
-# Service principal password: Wpq8Q~abE6ZkPa9ZziVH6CTlt8GNZ01WWwIlHavm
