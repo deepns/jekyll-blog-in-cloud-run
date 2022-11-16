@@ -16,10 +16,10 @@ After playing with hosting a jekyll site on GCP Cloud Run, I was curious to see 
 
 Assuming that Azure account and subscriptions are set up, these are steps in the workflow needed to deploy a jekyll site in Azure Container Instance.
 
-1. Create a resource group (having a separate resource group for this deployment for easier management)
-2. Create a private registry in [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
-3. Push the image from local machine to Azure Container Registry
-4. Deploy the container
+1. **Create a resource group** (having a separate resource group for this deployment for easier management)
+2. **Create a private registry** in [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
+3. **Push the image** from local machine to Azure Container Registry
+4. **Deploy the container**
    1. Create a service principal for azure container instance to access the image from the registry
    2. Create the container
 
