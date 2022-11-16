@@ -10,24 +10,7 @@ tags:
     - azure
     - docker
 toc: true
-header:
-  teaser: /assets/images/teasers/jekyll-on-cloud-run.jpg
 ---
-
-Drafting the post
-
-- what is this about? note about azure container instance
-- steps to go through (create a flow chart for the below steps)
-  - create a resource group
-  - create a container registry
-  - push the image to container registry
-  - create a service principal to container registry
-  - create the container image
-  - delete the resource group
-- cost analysis
-  - ACR
-  - ACI
-- comparison with gcp cloud run
 
 After playing with hosting a jekyll site on GCP Cloud Run, I was curious to see how similar deployments can be done in other cloud providers. So started my exploration with Azure. Since the site was already built as a container image, I just needed a way to publish the image and run the container. Azure Container Instance offered pretty much what I was looking for.
 
@@ -259,6 +242,6 @@ For this particular use case of deploying a jekyll based static site, I found GC
 - **Cost analysis**
   - GCP free tier was very well sufficient to run these experiments so additional costs incurred. GCP Artifact Registry includes 500MB of storage. With occasional push and pull ops to the artifact registry and ~150MB of container image, free limit of GCP Artifact Registry was never reached.
   - Likewise, Cloud Run access was well within the [free tier limit](https://cloud.google.com/run#section-13). Cloud Run comes with 2 million requests per month and CPU and memory cycles incurred during the request processing were also well within the limit (180000 vCPU seconds/month, 360000 GiB-seconds/month).
+  - For the Linux containers, [ACI pricing](https://azure.microsoft.com/en-gb/pricing/details/container-registry/#pricing) charges $0.00445 per GB and $0.04050 per vCPU on the pay-as-you pricing. So it can end up in a $1.08 per day even for a container with bare minimum configuration of 1-vCPU and 1-GB memory. Container registry charges will be separate though.
 - **https support**
-  - Cloud Run manages TLS for the container instances, comes with a unique HTTPS endpoint in `*.run.app` domain.
-  - ACI too comes with a HTTPS endpoint, however the onus falls on the application to manage the TLS connections and certificates.
+  - All Cloud Run instances come with a unique HTTPS endpoint in `*.run.app` domain. ACI too comes with a HTTPS endpoint, however the onus falls on the application to manage the TLS connections and certificates. With Cloud Run, this is more transparent as the services can continue to deliver over HTTP in the backend while getting full https support.

@@ -11,8 +11,6 @@ tags:
     - gcp
     - docker
 toc: true
-header:
-  teaser: /assets/images/teasers/jekyll-on-cloud-run.jpg
 ---
 
 This is continuation of my [previous post](https://www.deepanseeralan.com/tech/hosting-jekyll-site-in-gcp-cloud-run/). This part talks about publishing the jekyll blog container image to container registry, deploying a cloud run service with that image and set up continuous deployment from github repo. (note: all the below commands were run from the google cloud shell instance)
